@@ -1,0 +1,16 @@
+{
+  "name": "charity-donation-tracker",
+  "version": "1.0.0",
+  "description": "A student-friendly Solidity and React charity donation tracker DApp.",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.19"
+  }
+}
