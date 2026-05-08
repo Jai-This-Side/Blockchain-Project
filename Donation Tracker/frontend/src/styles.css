@@ -1,6 +1,6 @@
 :root {
-  color: #1f2937;
-  background: #f6f7f2;
+  color: #172033;
+  background: #eef2f5;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,8 +15,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 247, 242, 0.98)),
-    #f6f7f2;
+    linear-gradient(180deg, #e7edf2 0%, #f7f8fa 42%, #eef2f5 100%),
+    #eef2f5;
 }
 
 button,
@@ -26,18 +26,33 @@ select {
 }
 
 button {
-  min-height: 42px;
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
   color: #ffffff;
-  background: #0f766e;
+  background: #b4232a;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
   padding: 0 18px;
+  box-shadow: 0 10px 20px rgba(180, 35, 42, 0.16);
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 
 button:hover:not(:disabled) {
-  background: #115e59;
+  background: #921b22;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(180, 35, 42, 0.2);
+}
+
+button.secondary {
+  color: #223047;
+  background: #dfe7ec;
+  box-shadow: none;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #cbd7df;
+  box-shadow: none;
 }
 
 button:disabled {
@@ -48,7 +63,7 @@ button:disabled {
 input {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #cbd5d7;
+  border: 1px solid #ccd6de;
   border-radius: 8px;
   color: #111827;
   background: #ffffff;
@@ -58,7 +73,7 @@ input {
 select {
   width: 100%;
   min-height: 42px;
-  border: 1px solid #cbd5d7;
+  border: 1px solid #ccd6de;
   border-radius: 8px;
   color: #111827;
   background: #ffffff;
@@ -67,30 +82,43 @@ select {
 }
 
 input:focus {
-  border-color: #0f766e;
-  outline: 3px solid rgba(15, 118, 110, 0.18);
+  border-color: #b4232a;
+  outline: 3px solid rgba(180, 35, 42, 0.16);
 }
 
 .app-shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 28px 0 48px;
+  padding: 24px 0 52px;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 22px 0;
-  border-bottom: 1px solid #d7ddd2;
+  gap: 24px;
+  min-height: 150px;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 240, 245, 0.92)),
+    #ffffff;
+  padding: 26px;
+  box-shadow: 0 18px 40px rgba(23, 32, 51, 0.08);
 }
 
-.eyebrow {
-  margin: 0 0 6px;
-  color: #b45309;
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-bottom: 12px;
+  border: 1px solid #cbd7df;
+  border-radius: 8px;
+  color: #365064;
+  background: #f4f8fb;
+  padding: 0 10px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
 }
 
@@ -103,9 +131,28 @@ p {
 
 h1 {
   margin-bottom: 0;
-  color: #102a43;
-  font-size: 2rem;
+  color: #111827;
+  font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.hero-stats span {
+  min-height: 34px;
+  border: 1px solid #d7e1e8;
+  border-radius: 8px;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  font-weight: 850;
 }
 
 h2 {
@@ -118,20 +165,24 @@ h2 {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px 12px;
-  min-width: 280px;
-  border: 1px solid #d7ddd2;
+  min-width: 320px;
+  border: 1px solid #d8e1e8;
   border-radius: 8px;
-  background: #ffffff;
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .wallet-panel span {
-  color: #64748b;
+  color: #697789;
   font-size: 0.88rem;
+  font-weight: 750;
 }
 
 .wallet-panel strong {
   color: #111827;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .wallet-panel button {
@@ -141,19 +192,27 @@ h2 {
 .tabs {
   display: flex;
   gap: 8px;
-  margin: 22px 0;
+  margin: 18px 0;
+  padding: 8px;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 26px rgba(23, 32, 51, 0.06);
 }
 
 .tabs button {
-  min-width: 96px;
-  color: #334155;
-  background: #e4e9df;
+  flex: 1;
+  min-width: 112px;
+  color: #3f4d63;
+  background: transparent;
+  box-shadow: none;
   text-transform: capitalize;
 }
 
 .tabs button.active {
   color: #ffffff;
-  background: #102a43;
+  background: #172033;
+  box-shadow: 0 12px 22px rgba(23, 32, 51, 0.18);
 }
 
 .notice,
@@ -164,9 +223,11 @@ h2 {
 }
 
 .notice {
-  color: #0f3b3a;
-  background: #d9f2eb;
-  border: 1px solid #a8ded1;
+  margin-bottom: 20px;
+  color: #173b34;
+  background: #e0f2ee;
+  border: 1px solid #b8ded5;
+  font-weight: 750;
 }
 
 .warning-band {
@@ -179,8 +240,8 @@ h2 {
 .page-grid,
 .admin-layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 20px;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
 }
 
@@ -192,28 +253,34 @@ h2 {
 .metric,
 .tool-panel,
 .milestone-card {
-  border: 1px solid #d7ddd2;
+  border: 1px solid #d8e1e8;
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
+  box-shadow: 0 14px 32px rgba(23, 32, 51, 0.07);
 }
 
 .metric {
-  min-height: 112px;
+  position: relative;
+  min-height: 118px;
   padding: 18px;
-  border-top-width: 5px;
+  overflow: hidden;
+  border-left-width: 5px;
 }
 
 .metric.donation {
-  border-top-color: #0f766e;
+  border-left-color: #b4232a;
 }
 
 .metric.balance {
-  border-top-color: #2563eb;
+  border-left-color: #0f766e;
 }
 
 .metric.admin {
-  border-top-color: #b45309;
+  border-left-color: #b7791f;
+}
+
+.metric.review {
+  border-left-color: #3f4d63;
 }
 
 .metric span,
@@ -227,12 +294,35 @@ label {
   display: block;
   margin-top: 8px;
   color: #111827;
-  font-size: 1.45rem;
+  font-size: 1.65rem;
   overflow-wrap: anywhere;
 }
 
 .tool-panel {
-  padding: 20px;
+  padding: 22px;
+}
+
+.desk-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 74px;
+  margin-top: 18px;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  background: #f7fafc;
+  padding: 16px;
+}
+
+.desk-summary span {
+  color: #697789;
+  font-weight: 850;
+}
+
+.desk-summary strong {
+  color: #172033;
+  font-size: 1.8rem;
 }
 
 .tool-panel.narrow {
@@ -243,6 +333,44 @@ form {
   display: grid;
   gap: 12px;
   margin-top: 18px;
+}
+
+.wallet-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.wallet-chip {
+  min-height: 66px;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  background: #f7fafc;
+  padding: 11px;
+}
+
+.wallet-chip.selected {
+  border-color: #b4232a;
+  background: #fff5f5;
+}
+
+.wallet-chip span,
+.wallet-chip strong {
+  display: block;
+}
+
+.wallet-chip span {
+  color: #697789;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.wallet-chip strong {
+  margin-top: 5px;
+  color: #172033;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
 }
 
 .input-row {
@@ -274,9 +402,11 @@ form {
 }
 
 .section-title span {
-  color: #64748b;
+  color: #697789;
   font-size: 0.9rem;
   font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .milestones {
@@ -290,23 +420,31 @@ form {
 
 .milestone-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
-  min-height: 118px;
+  min-height: 126px;
   padding: 18px;
+  border-left: 5px solid #d8e1e8;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.milestone-card:hover {
+  border-left-color: #b4232a;
+  box-shadow: 0 18px 38px rgba(23, 32, 51, 0.1);
+  transform: translateY(-1px);
 }
 
 .milestone-id {
-  color: #b45309;
+  color: #b4232a;
   font-size: 0.82rem;
   font-weight: 900;
 }
 
 .milestone-card h3 {
   margin: 5px 0 8px;
-  color: #102a43;
-  font-size: 1.05rem;
+  color: #111827;
+  font-size: 1.12rem;
   overflow-wrap: anywhere;
 }
 
@@ -316,16 +454,53 @@ form {
   font-weight: 800;
 }
 
+.milestone-card .recipient-line {
+  margin-bottom: 7px;
+  color: #697789;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 .milestone-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
+  max-width: 420px;
+}
+
+.milestone-actions button {
+  min-width: 126px;
+}
+
+.approval-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.progress-track {
+  width: min(320px, 100%);
+  height: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e5edf2;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b4232a, #0f766e);
+  transition: width 180ms ease;
 }
 
 .badge {
   min-width: 86px;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 7px 10px;
   text-align: center;
   font-size: 0.78rem;
@@ -333,13 +508,13 @@ form {
 }
 
 .badge.pending {
-  color: #7c2d12;
-  background: #ffedd5;
+  color: #7a4a08;
+  background: #fff3d1;
 }
 
 .badge.approved {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: #155e75;
+  background: #cffafe;
 }
 
 .badge.released {
@@ -351,6 +526,38 @@ form {
   color: #475569;
   background: #ffffff;
   border: 1px dashed #b8c2bd;
+}
+
+.identity-panel {
+  min-height: 232px;
+}
+
+.identity-stack {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.identity-stack div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  background: #f7fafc;
+  padding: 14px;
+}
+
+.identity-stack span {
+  color: #697789;
+  font-weight: 800;
+}
+
+.identity-stack strong {
+  color: #172033;
+  font-size: 1.4rem;
 }
 
 @media (max-width: 820px) {
@@ -380,11 +587,16 @@ form {
   }
 
   .tabs button {
-    min-width: 88px;
+    flex: 0 0 auto;
+    min-width: 132px;
   }
 
   .milestone-actions {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .wallet-roster {
+    grid-template-columns: 1fr;
   }
 }

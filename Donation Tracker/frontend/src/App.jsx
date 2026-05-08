@@ -1,46 +1,71 @@
 import React, { useMemo, useState } from "react";
 
-const pages = ["home", "donate", "admin"];
-const currencies = ["ETH", "BTC"];
+const pages = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "donate", label: "Donate" },
+  { id: "new-release", label: "New Release" },
+  { id: "ngo", label: "NGO Verify" },
+  { id: "government", label: "Government Verify" },
+];
+const CURRENCY = "DRC";
+const NGO_ADDRESS = "NGO-VERIFY-57";
+const GOVERNMENT_ADDRESS = "GOV-VERIFY-57";
+const NON_VERIFIER = "PUBLIC-WALLET-09";
 
-const startingBalances = {
-  ETH: 100,
-  BTC: 5,
-};
+const initialWallets = [
+  { address: "0xA11CE", label: "Asha", balance: 1200 },
+  { address: "0xB0B57", label: "Ben", balance: 900 },
+  { address: "0xC1V1C", label: "Civic Club", balance: 1500 },
+  { address: "0xD0N0R", label: "Dana", balance: 700 },
+  { address: "0xECHO5", label: "Echo Aid", balance: 1100 },
+];
+
+const initialReleases = [];
+
+function createDonationId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function formatAmount(value) {
-  return Number(value).toFixed(4);
+  return Number(value).toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function App() {
-  const [activePage, setActivePage] = useState("home");
-  const [selectedCurrency, setSelectedCurrency] = useState("ETH");
-  const [balances, setBalances] = useState(startingBalances);
+  const [activePage, setActivePage] = useState("dashboard");
+  const [wallets] = useState(initialWallets);
+  const [selectedWallet, setSelectedWallet] = useState(initialWallets[0].address);
   const [donations, setDonations] = useState([]);
-  const [milestones, setMilestones] = useState([]);
-  const [donationAmount, setDonationAmount] = useState("");
-  const [milestoneDescription, setMilestoneDescription] = useState("");
-  const [milestoneAmount, setMilestoneAmount] = useState("");
-  const [message, setMessage] = useState("");
+  const [releases, setReleases] = useState(initialReleases);
+  const [donationAmount, setDonationAmount] = useState("250");
+  const [releaseAmount, setReleaseAmount] = useState("600");
+  const [recipient, setRecipient] = useState("0xVICT1M57");
+  const [releaseDescription, setReleaseDescription] = useState("");
+  const [message, setMessage] = useState("Dummy relief credits are locked until NGO and government verification are both complete.");
 
   const totals = useMemo(() => {
-    return currencies.reduce((result, currency) => {
-      const donated = donations
-        .filter((donation) => donation.currency === currency)
-        .reduce((sum, donation) => sum + donation.amount, 0);
+    const donated = donations.reduce((sum, donation) => sum + donation.amount, 0);
+    const released = releases
+      .filter((release) => release.released)
+      .reduce((sum, release) => sum + release.amount, 0);
+    const ready = releases.filter(
+      (release) => release.ngoVerified && release.governmentVerified && !release.released
+    ).length;
+    const pendingGovernment = releases.filter((release) => !release.governmentVerified && !release.released).length;
+    const pendingNgo = releases.filter((release) => !release.ngoVerified && !release.released).length;
 
-      const released = milestones
-        .filter((milestone) => milestone.currency === currency && milestone.released)
-        .reduce((sum, milestone) => sum + milestone.amount, 0);
+    return {
+      donated,
+      released,
+      locked: donated - released,
+      ready,
+      pendingGovernment,
+      pendingNgo,
+    };
+  }, [donations, releases]);
 
-      result[currency] = {
-        donated,
-        balance: donated - released,
-      };
-
-      return result;
-    }, {});
-  }, [donations, milestones]);
+  const currentWallet = wallets.find((wallet) => wallet.address === selectedWallet);
 
   function handleDonate(event) {
     event.preventDefault();
@@ -48,270 +73,401 @@ export default function App() {
     const amount = Number(donationAmount);
 
     if (!amount || amount <= 0) {
-      setMessage("Donation amount must be greater than zero");
-      return;
-    }
-
-    if (amount > balances[selectedCurrency]) {
-      setMessage(`Not enough dummy ${selectedCurrency} balance`);
+      setMessage("Donation amount must be greater than zero.");
       return;
     }
 
     setDonations((currentDonations) => [
       ...currentDonations,
       {
-        id: currentDonations.length,
+        id: createDonationId(),
+        donor: currentWallet.address,
+        label: currentWallet.label,
         amount,
-        currency: selectedCurrency,
-        donor: "Demo Student",
       },
     ]);
 
-    setBalances((currentBalances) => ({
-      ...currentBalances,
-      [selectedCurrency]: currentBalances[selectedCurrency] - amount,
-    }));
-
-    setDonationAmount("");
-    setMessage(`Donation of ${formatAmount(amount)} ${selectedCurrency} recorded`);
+    setMessage(`${currentWallet.label} donated ${formatAmount(amount)} ${CURRENCY}. The donation was added to the public ledger.`);
   }
 
-  function handleCreateMilestone(event) {
+  function donateFromAllWallets() {
+    const amounts = [300, 250, 400, 150, 350];
+
+    setDonations((currentDonations) => [
+      ...currentDonations,
+      ...wallets.map((wallet, index) => ({
+        id: `${createDonationId()}-${index}`,
+        donor: wallet.address,
+        label: wallet.label,
+        amount: amounts[index],
+      })),
+    ]);
+
+    setMessage("Received donations from 5 wallets. Release remains locked until both verifiers approve.");
+  }
+
+  function createRelease(event) {
     event.preventDefault();
+    const amount = Number(releaseAmount);
 
-    const amount = Number(milestoneAmount);
+    if (!recipient.trim()) {
+      setMessage("Recipient address is required.");
+      return;
+    }
 
-    if (!milestoneDescription.trim()) {
-      setMessage("Milestone description is required");
+    if (!releaseDescription.trim()) {
+      setMessage("Release description is required.");
       return;
     }
 
     if (!amount || amount <= 0) {
-      setMessage("Milestone amount must be greater than zero");
+      setMessage("Release amount must be greater than zero.");
       return;
     }
 
-    setMilestones((currentMilestones) => [
-      ...currentMilestones,
+    setReleases((currentReleases) => [
+      ...currentReleases,
       {
-        id: currentMilestones.length,
-        description: milestoneDescription.trim(),
+        id: currentReleases.length,
+        crisisId: 57,
+        description: releaseDescription.trim(),
+        recipient: recipient.trim(),
         amount,
-        currency: selectedCurrency,
-        approved: false,
+        ngoVerified: false,
+        governmentVerified: false,
         released: false,
       },
     ]);
 
-    setMilestoneDescription("");
-    setMilestoneAmount("");
-    setMessage("Milestone created");
+    setReleaseDescription("");
+    setMessage("NGO created a crisis release request. It still needs both approvals.");
   }
 
-  function handleApproveMilestone(id) {
-    setMilestones((currentMilestones) =>
-      currentMilestones.map((milestone) =>
-        milestone.id === id ? { ...milestone, approved: true } : milestone
-      )
+  function verifyRelease(id, verifier) {
+    setReleases((currentReleases) =>
+      currentReleases.map((release) => {
+        if (release.id !== id || release.released) {
+          return release;
+        }
+
+        return verifier === "ngo"
+          ? { ...release, ngoVerified: true }
+          : { ...release, governmentVerified: true };
+      })
     );
-    setMessage("Milestone approved");
+
+    setMessage(verifier === "ngo" ? "NGO verifier approved the crisis." : "Government verifier approved the crisis.");
   }
 
-  function handleReleaseFunds(id) {
-    const milestone = milestones.find((item) => item.id === id);
+  function releaseFunds(id, actor = NGO_ADDRESS) {
+    const release = releases.find((item) => item.id === id);
 
-    if (!milestone) {
-      setMessage("Milestone not found");
+    if (actor !== NGO_ADDRESS) {
+      setMessage(`Release rejected: ${NON_VERIFIER} is not an authorized verifier.`);
       return;
     }
 
-    if (!milestone.approved) {
-      setMessage("Approve the milestone before release");
+    if (!release.ngoVerified || !release.governmentVerified) {
+      setMessage("Release rejected: both NGO and government must verify first.");
       return;
     }
 
-    if (milestone.released) {
-      setMessage("Funds already released");
+    if (release.amount > totals.locked) {
+      setMessage("Release rejected: the fund does not have enough locked dummy credits.");
       return;
     }
 
-    if (totals[milestone.currency].balance < milestone.amount) {
-      setMessage(`Not enough donated ${milestone.currency} in the contract balance`);
-      return;
-    }
-
-    setMilestones((currentMilestones) =>
-      currentMilestones.map((item) =>
-        item.id === id ? { ...item, released: true } : item
-      )
+    setReleases((currentReleases) =>
+      currentReleases.map((item) => (item.id === id ? { ...item, released: true } : item))
     );
-    setMessage(`Released ${formatAmount(milestone.amount)} ${milestone.currency}`);
+    setMessage(`Released ${formatAmount(release.amount)} ${CURRENCY} to ${release.recipient}.`);
   }
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Dummy blockchain demo</p>
-          <h1>Charity Donation Tracker</h1>
+          <span className="kicker">Emergency Fund Console</span>
+          <h1>DisasterRelief Dual-Key Fund</h1>
+          <div className="hero-stats" aria-label="Fund status">
+            <span>{releases.length} release requests</span>
+            <span>{totals.ready} ready</span>
+            <span>{donations.length} donations</span>
+          </div>
         </div>
         <div className="wallet-panel">
-          <span>Demo mode</span>
-          <strong>No wallet required</strong>
-          <select value={selectedCurrency} onChange={(event) => setSelectedCurrency(event.target.value)}>
-            {currencies.map((currency) => (
-              <option key={currency} value={currency}>
-                {currency}
-              </option>
-            ))}
-          </select>
+          <span>Currency</span>
+          <strong>{CURRENCY}</strong>
+          <span>NGO verifier</span>
+          <strong>{NGO_ADDRESS}</strong>
+          <span>Government verifier</span>
+          <strong>{GOVERNMENT_ADDRESS}</strong>
         </div>
       </header>
 
       <nav className="tabs" aria-label="Main pages">
         {pages.map((page) => (
           <button
-            key={page}
+            key={page.id}
             type="button"
-            className={activePage === page ? "active" : ""}
-            onClick={() => setActivePage(page)}
+            className={activePage === page.id ? "active" : ""}
+            onClick={() => setActivePage(page.id)}
           >
-            {page}
+            {page.label}
           </button>
         ))}
       </nav>
 
       {message && <p className="notice">{message}</p>}
 
-      {activePage === "home" && (
+      {activePage === "dashboard" && (
         <section className="page-grid">
           <div className="metric-list">
-            {currencies.map((currency) => (
-              <React.Fragment key={currency}>
-                <article className="metric donation">
-                  <span>Total {currency} Donations</span>
-                  <strong>{formatAmount(totals[currency].donated)} {currency}</strong>
-                </article>
-                <article className="metric balance">
-                  <span>{currency} Contract Balance</span>
-                  <strong>{formatAmount(totals[currency].balance)} {currency}</strong>
-                </article>
-              </React.Fragment>
-            ))}
+            <article className="metric donation">
+              <span>Total Dummy Donations</span>
+              <strong>{formatAmount(totals.donated)} {CURRENCY}</strong>
+            </article>
+            <article className="metric balance">
+              <span>Locked Fund Balance</span>
+              <strong>{formatAmount(totals.locked)} {CURRENCY}</strong>
+            </article>
+            <article className="metric admin">
+              <span>Released to Victims</span>
+              <strong>{formatAmount(totals.released)} {CURRENCY}</strong>
+            </article>
+            <article className="metric review">
+              <span>Awaiting Review</span>
+              <strong>{totals.pendingNgo + totals.pendingGovernment}</strong>
+            </article>
           </div>
 
-          <MilestoneList
-            milestones={milestones}
-            onApprove={handleApproveMilestone}
-            onRelease={handleReleaseFunds}
-          />
+          <ReleaseList releases={releases} onRelease={releaseFunds} mode="overview" />
         </section>
       )}
 
       {activePage === "donate" && (
-        <section className="tool-panel narrow">
-          <h2>Donate Dummy Currency</h2>
-          <form onSubmit={handleDonate}>
-            <label htmlFor="donationAmount">Amount</label>
-            <div className="input-row">
-              <input
-                id="donationAmount"
-                min="0"
-                step="0.0001"
-                type="number"
-                value={donationAmount}
-                onChange={(event) => setDonationAmount(event.target.value)}
-                placeholder="0.10"
-                required
-              />
-              <span>{selectedCurrency}</span>
-            </div>
-            <p className="helper-text">
-              Demo balance: {formatAmount(balances[selectedCurrency])} {selectedCurrency}
-            </p>
-            <button type="submit">Donate</button>
-          </form>
-        </section>
-      )}
-
-      {activePage === "admin" && (
         <section className="admin-layout">
           <div className="tool-panel">
             <div className="section-title">
-              <h2>Create Milestone</h2>
-              <span>Admin demo</span>
+              <h2>Public Donation</h2>
+              <span>No restriction</span>
             </div>
-            <form onSubmit={handleCreateMilestone}>
-              <label htmlFor="milestoneDescription">Description</label>
-              <input
-                id="milestoneDescription"
-                type="text"
-                value={milestoneDescription}
-                onChange={(event) => setMilestoneDescription(event.target.value)}
-                placeholder="Buy books for students"
-                required
-              />
+            <WalletRoster wallets={wallets} selectedWallet={selectedWallet} />
+            <form onSubmit={handleDonate}>
+              <label htmlFor="wallet">Donor wallet</label>
+              <select id="wallet" value={selectedWallet} onChange={(event) => setSelectedWallet(event.target.value)}>
+                {wallets.map((wallet) => (
+                  <option key={wallet.address} value={wallet.address}>
+                    {wallet.label} - {wallet.address}
+                  </option>
+                ))}
+              </select>
 
-              <label htmlFor="milestoneAmount">Amount</label>
+              <label htmlFor="donationAmount">Amount</label>
               <div className="input-row">
                 <input
-                  id="milestoneAmount"
+                  id="donationAmount"
                   min="0"
-                  step="0.0001"
+                  step="1"
                   type="number"
-                  value={milestoneAmount}
-                  onChange={(event) => setMilestoneAmount(event.target.value)}
-                  placeholder="0.50"
+                  value={donationAmount}
+                  onChange={(event) => setDonationAmount(event.target.value)}
                   required
                 />
-                <span>{selectedCurrency}</span>
+                <span>{CURRENCY}</span>
               </div>
-
-              <button type="submit">Create</button>
+              <button type="submit">Donate</button>
+              <button type="button" className="secondary" onClick={donateFromAllWallets}>Receive From 5 Wallets</button>
             </form>
           </div>
 
-          <MilestoneList
-            milestones={milestones}
-            onApprove={handleApproveMilestone}
-            onRelease={handleReleaseFunds}
-          />
+          <DonationLedger donations={donations} />
+        </section>
+      )}
+
+      {activePage === "new-release" && (
+        <section className="admin-layout">
+          <div className="tool-panel">
+            <div className="section-title">
+              <h2>New Release</h2>
+              <span>Describe the need</span>
+            </div>
+            <form onSubmit={createRelease}>
+              <label htmlFor="releaseDescription">Description</label>
+              <input
+                id="releaseDescription"
+                type="text"
+                value={releaseDescription}
+                onChange={(event) => setReleaseDescription(event.target.value)}
+                placeholder="Emergency food, shelter, and medical supplies"
+                required
+              />
+
+              <label htmlFor="recipient">Victim recipient</label>
+              <input
+                id="recipient"
+                type="text"
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
+                required
+              />
+
+              <label htmlFor="releaseAmount">Amount</label>
+              <div className="input-row">
+                <input
+                  id="releaseAmount"
+                  min="0"
+                  step="1"
+                  type="number"
+                  value={releaseAmount}
+                  onChange={(event) => setReleaseAmount(event.target.value)}
+                  required
+                />
+                <span>{CURRENCY}</span>
+              </div>
+
+              <button type="submit">Create Release</button>
+            </form>
+          </div>
+
+          <ReleaseList releases={releases} onVerify={verifyRelease} onRelease={releaseFunds} mode="ngo" />
+        </section>
+      )}
+
+      {activePage === "ngo" && (
+        <section className="admin-layout">
+          <div className="tool-panel identity-panel">
+            <div className="section-title">
+              <h2>NGO Verification Desk</h2>
+              <span>{NGO_ADDRESS}</span>
+            </div>
+            <div className="desk-summary">
+              <span>Pending NGO</span>
+              <strong>{totals.pendingNgo}</strong>
+            </div>
+          </div>
+
+          <ReleaseList releases={releases} onVerify={verifyRelease} onRelease={releaseFunds} mode="ngo" />
+        </section>
+      )}
+
+      {activePage === "government" && (
+        <section className="admin-layout">
+          <div className="tool-panel identity-panel">
+            <div className="section-title">
+              <h2>Government Verification Desk</h2>
+              <span>{GOVERNMENT_ADDRESS}</span>
+            </div>
+            <div className="identity-stack">
+              <div>
+                <span>Pending Review</span>
+                <strong>{totals.pendingGovernment}</strong>
+              </div>
+              <div>
+                <span>Verified</span>
+                <strong>{releases.filter((release) => release.governmentVerified).length}</strong>
+              </div>
+            </div>
+          </div>
+
+          <ReleaseList releases={releases} onVerify={verifyRelease} mode="government" />
         </section>
       )}
     </main>
   );
 }
 
-function MilestoneList({ milestones, onApprove, onRelease }) {
+function WalletRoster({ wallets, selectedWallet }) {
+  return (
+    <div className="wallet-roster" aria-label="Wallet balances">
+      {wallets.map((wallet) => (
+        <div className={wallet.address === selectedWallet ? "wallet-chip selected" : "wallet-chip"} key={wallet.address}>
+          <span>{wallet.label}</span>
+          <strong>{wallet.address}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonationLedger({ donations }) {
   return (
     <section className="milestones">
       <div className="section-title">
-        <h2>Milestones</h2>
-        <span>{milestones.length} total</span>
+        <h2>Transparent Donation Ledger</h2>
+        <span>{donations.length} records</span>
       </div>
 
-      {milestones.length === 0 ? (
-        <p className="empty-state">No milestones yet.</p>
+      {donations.length === 0 ? (
+        <p className="empty-state">No dummy donations yet.</p>
       ) : (
         <div className="milestone-list">
-          {milestones.map((milestone) => (
-            <article className="milestone-card" key={milestone.id}>
+          {donations.map((donation) => (
+            <article className="milestone-card" key={donation.id}>
               <div>
-                <span className="milestone-id">#{milestone.id}</span>
-                <h3>{milestone.description}</h3>
-                <p>{formatAmount(milestone.amount)} {milestone.currency}</p>
+                <span className="milestone-id">{donation.donor}</span>
+                <h3>{donation.label}</h3>
+                <p>{formatAmount(donation.amount)} {CURRENCY}</p>
+              </div>
+              <span className="badge approved">Received</span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReleaseList({ releases, onVerify, onRelease, mode }) {
+  const heading = mode === "government" ? "Government Queue" : mode === "ngo" ? "NGO Release Queue" : "Crisis Releases";
+
+  return (
+    <section className="milestones">
+      <div className="section-title">
+        <h2>{heading}</h2>
+        <span>{releases.length} total</span>
+      </div>
+
+      {releases.length === 0 ? (
+        <p className="empty-state">No release requests yet.</p>
+      ) : (
+        <div className="milestone-list">
+          {releases.map((release) => (
+            <article className="milestone-card" key={release.id}>
+              <div>
+                <span className="milestone-id">Crisis #{release.crisisId} / Release #{release.id}</span>
+                <h3>{release.description}</h3>
+                <p className="recipient-line">{release.recipient}</p>
+                <p>{formatAmount(release.amount)} {CURRENCY}</p>
+                <ApprovalProgress release={release} />
+                <div className="approval-row">
+                  <StatusBadge active={release.ngoVerified} label="NGO" />
+                  <StatusBadge active={release.governmentVerified} label="Government" />
+                  {release.released && <span className="badge released">Released</span>}
+                </div>
               </div>
 
               <div className="milestone-actions">
-                <StatusBadge approved={milestone.approved} released={milestone.released} />
-                {!milestone.approved && (
-                  <button type="button" onClick={() => onApprove(milestone.id)}>
-                    Approve
-                  </button>
+                {mode === "ngo" && (
+                  <>
+                    <button type="button" disabled={release.ngoVerified || release.released} onClick={() => onVerify(release.id, "ngo")}>
+                      NGO Verify
+                    </button>
+                    <button type="button" disabled={release.released} onClick={() => onRelease(release.id)}>
+                      Release
+                    </button>
+                    <button type="button" className="secondary" disabled={release.released} onClick={() => onRelease(release.id, NON_VERIFIER)}>
+                      Try Non-Verifier
+                    </button>
+                  </>
                 )}
-                {milestone.approved && !milestone.released && (
-                  <button type="button" onClick={() => onRelease(milestone.id)}>
-                    Release
+                {mode === "government" && (
+                  <button
+                    type="button"
+                    disabled={release.governmentVerified || release.released}
+                    onClick={() => onVerify(release.id, "government")}
+                  >
+                    Government Verify
                   </button>
                 )}
               </div>
@@ -323,14 +479,17 @@ function MilestoneList({ milestones, onApprove, onRelease }) {
   );
 }
 
-function StatusBadge({ approved, released }) {
-  if (released) {
-    return <span className="badge released">Released</span>;
-  }
+function ApprovalProgress({ release }) {
+  const completedSteps = Number(release.ngoVerified) + Number(release.governmentVerified) + Number(release.released);
+  const percent = (completedSteps / 3) * 100;
 
-  if (approved) {
-    return <span className="badge approved">Approved</span>;
-  }
+  return (
+    <div className="progress-track" aria-label="Release progress">
+      <span style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
 
-  return <span className="badge pending">Pending</span>;
+function StatusBadge({ active, label }) {
+  return <span className={active ? "badge approved" : "badge pending"}>{label}</span>;
 }

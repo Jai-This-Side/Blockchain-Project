@@ -1,15 +1,17 @@
 const hre = require("hardhat");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  const [ngoVerifier, governmentVerifier] = await hre.ethers.getSigners();
 
   const CharityDonationTracker = await hre.ethers.getContractFactory("CharityDonationTracker");
-  const tracker = await CharityDonationTracker.deploy();
+  const tracker = await CharityDonationTracker.deploy(ngoVerifier.address, governmentVerifier.address);
 
   await tracker.waitForDeployment();
 
   console.log("CharityDonationTracker deployed to:", await tracker.getAddress());
-  console.log("Owner/admin wallet:", deployer.address);
+  console.log("NGO verifier:", ngoVerifier.address);
+  console.log("Government verifier:", governmentVerifier.address);
+  console.log("Currency mode: dummy relief credits only");
 }
 
 main().catch((error) => {

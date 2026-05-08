@@ -3,66 +3,92 @@ const { ethers } = require("hardhat");
 
 describe("CharityDonationTracker", function () {
   async function deployTrackerFixture() {
-    const [owner, donor] = await ethers.getSigners();
+    const [ngo, government, donor, recipient, outsider] = await ethers.getSigners();
     const CharityDonationTracker = await ethers.getContractFactory("CharityDonationTracker");
-    const tracker = await CharityDonationTracker.deploy();
+    const tracker = await CharityDonationTracker.deploy(ngo.address, government.address);
     await tracker.waitForDeployment();
 
-    return { tracker, owner, donor };
+    return { tracker, ngo, government, donor, recipient, outsider };
   }
 
-  it("accepts donations and tracks donor totals", async function () {
+  it("accepts dummy currency donations and tracks donor totals", async function () {
     const { tracker, donor } = await deployTrackerFixture();
-    const donationAmount = ethers.parseEther("1");
+    const donationAmount = 1000n;
 
-    await expect(tracker.connect(donor).donate({ value: donationAmount }))
+    await expect(tracker.connect(donor).donate(donationAmount))
       .to.emit(tracker, "DonationReceived")
       .withArgs(donor.address, donationAmount, donationAmount);
 
     expect(await tracker.donations(donor.address)).to.equal(donationAmount);
     expect(await tracker.totalDonations()).to.equal(donationAmount);
-    expect(await tracker.getContractBalance()).to.equal(donationAmount);
+    expect(await tracker.getFundBalance()).to.equal(donationAmount);
   });
 
-  it("allows the owner to create a milestone", async function () {
-    const { tracker } = await deployTrackerFixture();
-    const amount = ethers.parseEther("0.5");
+  it("allows the NGO verifier to create a crisis release", async function () {
+    const { tracker, ngo, recipient, outsider } = await deployTrackerFixture();
+    const amount = 350n;
 
-    await expect(tracker.createMilestone("Buy school supplies", amount))
-      .to.emit(tracker, "MilestoneCreated")
-      .withArgs(0n, "Buy school supplies", amount);
+    await expect(tracker.connect(ngo).createRelease(57, "Emergency shelter supplies", recipient.address, amount))
+      .to.emit(tracker, "ReleaseCreated")
+      .withArgs(0n, 57n, recipient.address, "Emergency shelter supplies", amount);
 
-    expect(await tracker.getMilestoneCount()).to.equal(1n);
+    await expect(
+      tracker.connect(outsider).createRelease(58, "Unauthorized request", recipient.address, amount)
+    ).to.be.revertedWith("Only NGO verifier can perform this action");
 
-    const milestone = await tracker.milestones(0);
-    expect(milestone.description).to.equal("Buy school supplies");
-    expect(milestone.amount).to.equal(amount);
-    expect(milestone.approved).to.equal(false);
-    expect(milestone.released).to.equal(false);
+    expect(await tracker.getReleaseCount()).to.equal(1n);
+
+    const releaseRequest = await tracker.releases(0);
+    expect(releaseRequest.crisisId).to.equal(57n);
+    expect(releaseRequest.description).to.equal("Emergency shelter supplies");
+    expect(releaseRequest.recipient).to.equal(recipient.address);
+    expect(releaseRequest.amount).to.equal(amount);
+    expect(releaseRequest.ngoVerified).to.equal(false);
+    expect(releaseRequest.governmentVerified).to.equal(false);
+    expect(releaseRequest.released).to.equal(false);
   });
 
-  it("approves and releases funds for a milestone", async function () {
-    const { tracker, donor, owner } = await deployTrackerFixture();
-    const donationAmount = ethers.parseEther("2");
-    const milestoneAmount = ethers.parseEther("1");
+  it("releases funds only after NGO and government verification", async function () {
+    const { tracker, ngo, government, donor, recipient } = await deployTrackerFixture();
 
-    await tracker.connect(donor).donate({ value: donationAmount });
-    await tracker.createMilestone("Pay medical camp expenses", milestoneAmount);
+    await tracker.connect(donor).donate(1000);
+    await tracker.connect(ngo).createRelease(57, "Mobile medical camp", recipient.address, 400);
 
-    await expect(tracker.approveMilestone(0))
-      .to.emit(tracker, "MilestoneApproved")
+    await expect(tracker.connect(ngo).releaseFunds(0)).to.be.revertedWith("NGO verification required");
+
+    await expect(tracker.connect(ngo).verifyByNgo(0))
+      .to.emit(tracker, "NgoVerified")
       .withArgs(0n);
 
-    await expect(() => tracker.releaseFunds(0)).to.changeEtherBalances(
-      [tracker, owner],
-      [-milestoneAmount, milestoneAmount]
+    await expect(tracker.connect(ngo).releaseFunds(0)).to.be.revertedWith("Government verification required");
+
+    await expect(tracker.connect(government).verifyByGovernment(0))
+      .to.emit(tracker, "GovernmentVerified")
+      .withArgs(0n);
+
+    await expect(tracker.connect(ngo).releaseFunds(0))
+      .to.emit(tracker, "FundsReleased")
+      .withArgs(0n, 57n, recipient.address, 400n);
+
+    const releaseRequest = await tracker.releases(0);
+    expect(releaseRequest.ngoVerified).to.equal(true);
+    expect(releaseRequest.governmentVerified).to.equal(true);
+    expect(releaseRequest.released).to.equal(true);
+    expect(await tracker.getFundBalance()).to.equal(600n);
+
+    await expect(tracker.connect(ngo).releaseFunds(0)).to.be.revertedWith("Funds already released");
+  });
+
+  it("keeps NGO and government verifier powers separate", async function () {
+    const { tracker, ngo, government, recipient, outsider } = await deployTrackerFixture();
+
+    await tracker.connect(ngo).createRelease(57, "Temporary shelter", recipient.address, 100);
+
+    await expect(tracker.connect(government).verifyByNgo(0)).to.be.revertedWith(
+      "Only NGO verifier can perform this action"
     );
-
-    const milestone = await tracker.milestones(0);
-    expect(milestone.approved).to.equal(true);
-    expect(milestone.released).to.equal(true);
-    expect(await tracker.getContractBalance()).to.equal(donationAmount - milestoneAmount);
-
-    await expect(tracker.releaseFunds(0)).to.be.revertedWith("Funds already released");
+    await expect(tracker.connect(outsider).verifyByGovernment(0)).to.be.revertedWith(
+      "Only government verifier can perform this action"
+    );
   });
 });
